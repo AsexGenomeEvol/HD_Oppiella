@@ -1,3 +1,5 @@
+## Pipeline description for genome assembly.
+
 ## Table of contents
 
 1. [QC pre-processing on raw data](#1_preprocessing)
@@ -199,7 +201,7 @@ seqkit sort --by-length --reverse *.501 -o - | rename_headers.awk -v sp=* versio
 
 ## <a name="4_evaluation"></a>4) Evaluation
 
-[Cegma](http://korflab.ucdavis.edu/datasets/cegma/):
+[CEGMA](http://korflab.ucdavis.edu/datasets/cegma/):
 
 ```
 module add SequenceAnalysis/CEGMA/2.5
@@ -207,7 +209,7 @@ module add SequenceAnalysis/CEGMA/2.5
 cegma -g *v03.fasta -T 10 -o *v03 2> cegma.output_log.txt
 ```
 
-[Busco](http://busco.ezlab.org/):
+[BUSCO](http://busco.ezlab.org/):
 
 ```
 source /scratch/beegfs/monthly/ptranvan/Software/busco/3.0.2b.sh
