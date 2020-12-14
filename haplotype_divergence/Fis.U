@@ -1,0 +1,24 @@
+### calculate Fis ###
+
+### remove genotypes with coverage smaller 10 ###
+vcftools --vcf SPECIESmergegeno.gvcf --minDP 10 --recode --out SPECIESmergeDP
+
+### subset the lineage/population for which to calculate Fis ###
+vcf-subset -c INDIVIDUAL1_lineage_x,INDIVIDUAL2_lineage_x,INDIVIDUAL3_lineage_x,INDIVIDUAL4_lineage_x SPECIESmergeDP.recode.vcf > SPECIESmergeDP_lineage_x.vcf
+
+### remove sites where all genotypes are missing ###
+vcftools --vcf SPECIESmergeDP_lineage_x.vcf --max-missing 1 --recode --out SPECIESmergeDP_lineage_xmm
+
+### reduce data to biallelic sites only ###
+vcftools --vcf SPECIESmergeDP_lineage_xmm.recode.vcf --min-alleles 2 --max-alleles 2 --recode --out SPECIESmergeDP_lineage_xmm22homo
+
+### partition into snps only ###
+vcftools --vcf SPECIESmergeDP_lineage_xmm22homo.recode.vcf --remove-indels --recode --out SPECIESmergeDP_lineage_xmm22homosnps
+
+### remove *'s derived from deleted indels in gvcf mode ###
+grep -Pv "\t\*\t" SPECIESmergeDP_lineage_xmm22homosnps.recode.vcf > SPECIESmergeDP_lineage_xmm22homosnpsstar.vcf
+
+### calculate Fis for the lineage/population with vcftools ###
+vcftools --vcf SPECIESmergeDP_lineage_xmm22homosnpsstar.vcf --het
+
+

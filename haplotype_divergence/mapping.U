@@ -1,0 +1,22 @@
+### quality control and splice-aware mapping ###
+
+### quality trimming of raw reads ###
+~/Software/TrimGalore-0.6.5/trim_galore --gzip --core 1 READFILE_raw_reads_R1.fastq.gz READFILE_raw_reads_R2.fastq.gz 
+
+### contaminant filtering with kraken2 ###
+kraken2 --gzip-compressed --paired --classified-out READFILE_classified_#.fastq --unclassified-out READFILE_unclassified_#.fastq READFILE_R1.fq.gz READFILE_R2.fq.gz --db minikraken2_v2 --report INDIVIDUAL_cleaned.report --threads 20
+
+### contaminant filtering with bbsplit (split reads according to which genome they map best against) ###
+bbsplit.sh in1=INDIVIDUAL_unclassified__1.fastq in2=INDIVIDUAL_unclassified__2.fastq ref=REFGENOME.fasta,GRCh38_latest_genomic.fna,all_seqs.fa,contaminant_scaffolds_SPECIES.fasta 
+basename=outINDIVIDUAL_%.fq outu1=INDIVIDUALclean1.fq outu2=INDIVIDUALclean2.fq maxindel=100k refstats=refstatstest ambiguous=best
+
+###interleave forward and reverse reads###
+reformat.sh in=outINDIVIDUAL_REFGENOME.fq out1=INDIVIDUAL_cleaned_R1.fq out2=INDIVIDUAL_cleaned_R2.fq
+
+### make index for star mapping ###
+STAR --runThreadN 20 --runMode genomeGenerate --genomeDir ./stargenome --genomeFastaFiles ./REFGENOME.fasta --limitGenomeGenerateRAM 5000000000000
+
+### map with star ###
+STAR --runThreadN 20 --genomeDir ./stargenome --readFilesIn ./INDIVIDUAL_cleaned_R1.fq ./INDIVIDUAL_cleaned_R2.fq --limitGenomeGenerateRAM 5000000000000 --outFileNamePrefix ./INDIVIDUAL
+
+

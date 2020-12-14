@@ -1,4 +1,4 @@
-# HD_Oppiella
+## HD_Oppiella
 
 Codes for "Haplotype divergence supports ancient asexuality in the oribatid mite Oppiella nova" manuscript.
 
@@ -8,5 +8,5 @@ Codes for "Haplotype divergence supports ancient asexuality in the oribatid mite
 
 * [Genome annotation](./annotation/)
 
-* [Haplotype divergence](#)
+* [Haplotype divergence](./haplotype_divergence/)
 

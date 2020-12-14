@@ -1,0 +1,197 @@
+### unix commands to generate alignments from the reconstructed phases ON = O. nova, H/K/S = population followed by individual ID and rename alleles according to their distance to the reference genome ###
+
+mkdir ONH1
+cd ONH1
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONH1ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==1{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONH3
+cd ONH3
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONH3ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==5{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONH7
+cd ONH7
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONH7ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==9{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONK2
+cd ONK2
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONK2ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==13{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONK5
+cd ONK5
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONK5ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==17{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONS1
+cd ONS1
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONS1ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==21{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../
+mkdir ONS4
+cd ONS4
+cat ../P1I1_P1I2_P1I3_P2I1_P2I2_P3I1_P3I3_ONS4ni.fasta | awk 'BEGIN{flag=0;count=0}NR%28==25{flag=1;print;next}flag{print;++count}count==3{count=0;flag=0}' | split -l 4
+cd ../INDIVIDUAL1
+for f in *; do cat $f ../ONK2/$f ../ONS1/$f ../ONH3/$f ../ONK5/$f ../ONS4/$f ../ONH7/$f; done > catted
+mkdir results
+mv catted results/catted
+cd results
+split -l 28 catted 
+
+### index ref genome ###
+samtools faidx 1_On_b1v03.fasta
+
+### extract first line from each alignment ###
+for f in x*; do sed '1q' $f; done > reflist0
+
+### remove haplotype name and > at the beginning ###
+sed -i 's/_ONH1_haplotypeA//g' reflist0
+sed -i 's/>//g' reflist0
+
+### modify list to meet input requirements for samtools ###
+cat reflist0 | perl -pe 's{_}{++$n % 5 ? $& : " "}ge' > reflist1
+cat reflist1 | perl -pe 's{_}{++$n % 4 ? $& : " "}ge' > reflist2
+
+### run perlscript (see github) to extract refgenome regions ###
+perl extract.pl > refregs
+
+### add reference genome region to alignments ###
+mkdir refsplit
+cp refregs refsplit/
+cd refsplit/
+python ~/Software/scripts/convert_fasta.py -i refregs -o refregsni
+split -l 2 refregsni
+cd ../
+mkdir A
+for f in x*; do python ~/Software/scripts/convert_fasta.py -i $f -o A/$f; done
+mkdir B
+cp refsplit/x* B/
+ls A | while read FILE; do   cat A/"$FILE" >> B/"$FILE"; done
+cd B
+
+### replace ambiguous bases with gaps (-) while keeping correct individual IDs ###
+mkdir trimal
+for f in x*; do sed -i -e 's/N/-/g' $f; done
+for f in x*; do sed -i -e 's/_O-/_ON/g' $f; done
+for f in x*; do sed -i -e 's/S/-/g' $f; done
+for f in x*; do sed -i -e 's/_ON-/_ONS/g' $f; done
+for f in x*; do sed -i -e 's/W/-/g' $f; done
+for f in x*; do sed -i -e 's/M/-/g' $f; done
+for f in x*; do sed -i -e 's/K/-/g' $f; done
+for f in x*; do sed -i -e 's/_ON-/_ONK/g' $f; done
+for f in x*; do sed -i -e 's/R/-/g' $f; done
+for f in x*; do sed -i -e 's/Y/-/g' $f; done
+
+### remove gaps ###
+for f in xa*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xb*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xc*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xd*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xe*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xf*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xg*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xh*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xi*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xj*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xk*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xl*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xm*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xn*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xo*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xp*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xq*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xr*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xs*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xt*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xu*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xv*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xw*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xx*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xy*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+for f in xz*; do ~/Software/trimAl/source/trimal -in $f -out trimal/$f -nogaps; done
+
+### remove alignments < 100bp ###
+cd trimal
+mkdir ni
+for f in x*; do python ~/Software/scripts/convert_fasta.py -i $f -o ni/$f -s 100; done
+cd ni
+find . -name "*" -size 0c -delete
+
+### calculate pairwise distances to the reference genome regions for every individual and allele and rename alleles according to their distance to the reference genome region (A always closer) ###
+mkdir matrix
+for f in x*; do ~/Software/snp-dists/snp-dists $f > matrix/$f; done
+cd matrix
+ls x* > list
+for f in x*; do (cat $f | awk 'NR==3 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==4 {print $2}'); done > outB
+paste list outA outB > ONH1distance
+cat ONH1distance | awk '{if ($2 > $3) print $1}' > ONH1AlargerB
+cp ONH1AlargerB ../
+cd ../
+xargs -a ONH1AlargerB sed -i 's/ONH1_haplotypeA/ONH1_haplotypeC/g'
+xargs -a ONH1AlargerB sed -i 's/ONH1_haplotypeB/ONH1_haplotypeA/g'
+xargs -a ONH1AlargerB sed -i 's/ONH1_haplotypeC/ONH1_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==5 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==6 {print $2}'); done > outB
+paste list outA outB > ONK2distance
+cat ONK2distance | awk '{if ($2 > $3) print $1}' > ONK2AlargerB
+cp ONK2AlargerB ../
+cd ../
+xargs -a ONK2AlargerB sed -i 's/ONK2_haplotypeA/ONK2_haplotypeC/g'
+xargs -a ONK2AlargerB sed -i 's/ONK2_haplotypeB/ONK2_haplotypeA/g'
+xargs -a ONK2AlargerB sed -i 's/ONK2_haplotypeC/ONK2_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==7 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==8 {print $2}'); done > outB
+paste list outA outB > ONS1distance
+cat ONS1distance | awk '{if ($2 > $3) print $1}' > ONS1AlargerB
+cp ONS1AlargerB ../
+cd ../
+xargs -a ONS1AlargerB sed -i 's/ONS1_haplotypeA/ONS1_haplotypeC/g'
+xargs -a ONS1AlargerB sed -i 's/ONS1_haplotypeB/ONS1_haplotypeA/g'
+xargs -a ONS1AlargerB sed -i 's/ONS1_haplotypeC/ONS1_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==9 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==10 {print $2}'); done > outB
+paste list outA outB > ONH3distance
+cat ONH3distance | awk '{if ($2 > $3) print $1}' > ONH3AlargerB
+cp ONH3AlargerB ../
+cd ../
+xargs -a ONH3AlargerB sed -i 's/ONH3_haplotypeA/ONH3_haplotypeC/g'
+xargs -a ONH3AlargerB sed -i 's/ONH3_haplotypeB/ONH3_haplotypeA/g'
+xargs -a ONH3AlargerB sed -i 's/ONH3_haplotypeC/ONH3_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==11 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==12 {print $2}'); done > outB
+paste list outA outB > ONK5distance
+cat ONK5distance | awk '{if ($2 > $3) print $1}' > ONK5AlargerB
+cp ONK5AlargerB ../
+cd ../
+xargs -a ONK5AlargerB sed -i 's/ONK5_haplotypeA/ONK5_haplotypeC/g'
+xargs -a ONK5AlargerB sed -i 's/ONK5_haplotypeB/ONK5_haplotypeA/g'
+xargs -a ONK5AlargerB sed -i 's/ONK5_haplotypeC/ONK5_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==13 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==14 {print $2}'); done > outB
+paste list outA outB > ONS4distance
+cat ONS4distance | awk '{if ($2 > $3) print $1}' > ONS4AlargerB
+cp ONS4AlargerB ../
+cd ../
+xargs -a ONS4AlargerB sed -i 's/ONS4_haplotypeA/ONS4_haplotypeC/g'
+xargs -a ONS4AlargerB sed -i 's/ONS4_haplotypeB/ONS4_haplotypeA/g'
+xargs -a ONS4AlargerB sed -i 's/ONS4_haplotypeC/ONS4_haplotypeB/g'
+cd matrix
+for f in x*; do (cat $f | awk 'NR==15 {print $2}'); done > outA
+for f in x*; do (cat $f | awk 'NR==16 {print $2}'); done > outB
+paste list outA outB > ONH7distance
+cat ONH7distance | awk '{if ($2 > $3) print $1}' > ONH7AlargerB
+cp ONH7AlargerB ../
+cd ../
+xargs -a ONH7AlargerB sed -i 's/ONH7_haplotypeA/ONH7_haplotypeC/g'
+xargs -a ONH7AlargerB sed -i 's/ONH7_haplotypeB/ONH7_haplotypeA/g'
+xargs -a ONH7AlargerB sed -i 's/ONH7_haplotypeC/ONH7_haplotypeB/g'
+
+### remove reference genome region from alignments again and modify sequence headers ###
+for f in x*; do sed -i '1,2d' $f; done
+mkdir treecl
+cp x* treecl/
+cd treecl
+for f in x*; do sed -i 's/>.*ON/>ON/' $f; done
+for f in x*; do sed -i 's/haplotype//g' $f; done

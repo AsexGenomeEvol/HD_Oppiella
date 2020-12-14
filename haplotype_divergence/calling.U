@@ -1,0 +1,39 @@
+### variant calling ###
+
+### add readgroup information according to individual ###
+java -jar /usr/product/bioinfo/PICARD/2.20.2/picard.jar AddOrReplaceReadGroups I=INDIVIDUALAligned.out.sam O=INDIVIDUAL_readgroup.sam RGID=1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=INDIVIDUAL
+
+### remove reads whose mate does not pair ###
+samtools view -f 2 -bS -o INDIVIDUAL_readgroup_fixmate.bam INDIVIDUAL_readgroup.sam 
+
+### coordinate sort ###
+gatk SortSam --INPUT INDIVIDUAL_readgroup_fixmate.bam --OUTPUT INDIVIDUAL_readgroup_fixmate_coord.bam --SORT_ORDER=coordinate --TMP_DIR=`pwd`/tmp
+
+### remove all duplicates (PCR+optical) ###
+java -jar /usr/product/bioinfo/PICARD/2.20.2/picard.jar MarkDuplicates INPUT=INDIVIDUAL_readgroup_fixmate_coord.bam OUTPUT=INDIVIDUAL_readgroup_fixmate_coord_optrem.bam METRICS_FILE=metrics.txt REMOVE_DUPLICATES=true
+
+### check if bam is good to go for GATK ###
+gatk ValidateSamFile --INPUT=INDIVIDUAL_readgroup_fixmate_coord_optrem.bam --IGNORE=MISSING_TAG_NM --REFERENCE_SEQUENCE=REFGENOME.fasta
+
+### merge .bam files ###
+samtools merge SPECIESmerge.bam INDIVIDUAL1_cleaned_clipped_coord_readgroup_optrem.bam INDIVIDUAL2_cleaned_clipped_coord_readgroup_optrem.bam ...
+
+### remove sequences in intronic regions ###
+gatk SplitNCigarReads -R REFGENOME.fasta -I SPECIESmerge.bam -O SPECIESmerge_split.bam --TMP_DIR /scratch/abrandt3/phaser_tmp
+
+### build indexes for snp calling with gatk ###
+java -jar /usr/product/bioinfo/PICARD/2.20.2/picard.jar BuildBamIndex I=SPECIESmerge_split.bam
+samtools faidx REFGENOME.fasta
+gatk CreateSequenceDictionary --REFERENCE REFGENOME.fasta
+
+### run GATK in gvcf mode ###
+gatk HaplotypeCaller -I SPECIESmerge_split.bam -O SPECIESmerge_split_INDIVIDUAL.gvcf -R 1_On_b1v03.fasta -ERC BP_RESOLUTION --sample-name INDIVIDUAL --dont-use-soft-clipped-bases
+
+gatk CombineGVCFs -R REFGENOME.fasta -V SPECIESmerge_split_INDIVIDUAL1.gvcf -V SPECIESmerge_split_INDIVIDUAL2.gvcf ... -O SPECIESmerge.gvcf
+
+java -jar /usr/product/bioinfo/SL_7.0/BIOINFORMATICS/GATK/3.8/GenomeAnalysisTK.jar -T GenotypeGVCFs -R REFGENOME.fasta -V SPECIESmerge.gvcf -allSites -o SPECIESmergegeno.gvcf
+
+### as an alternative: run GATK HaplotypeCaller ###
+### gatk HaplotypeCaller -I SPECIESmerge_split.bam -O SPECIESmerge_split.vcf -R REFGENOME.fasta ### (older version -> yields basically the same results but not usable for %het estimation) ###
+
+

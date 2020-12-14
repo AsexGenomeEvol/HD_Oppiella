@@ -1,0 +1,23 @@
+### calculate SFS plot ###
+
+### remove genotypes with coverage smaller 10 ###
+vcftools --vcf SPECIESmergegeno.gvcf --minDP 10 --recode --out SPECIESmergeDP
+
+### subset the individuals for which to calculate the SFS (7 individuals of O. nova) ###
+vcf-subset -c INDIVIDUAL1_subset_x,INDIVIDUAL2_subset_x,INDIVIDUAL3_subset_x,INDIVIDUAL4_subset_x SPECIESmergeDP.recode.vcf > SPECIESmergeDP_subset_x.vcf
+
+### remove sites where all genotypes are missing ###
+vcftools --vcf SPECIESmergeDP_subset_x.vcf --max-missing 1 --recode --out SPECIESmergeDP_subset_xmm
+
+### reduce data to biallelic sites only ###
+vcftools --vcf SPECIESmergeDP_subset_xmm.recode.vcf --min-alleles 2 --max-alleles 2 --recode --out SPECIESmergeDP_subset_xmm22homo
+
+### partition into snps only ###
+vcftools --vcf SPECIESmergeDP_subset_xmm22homo.recode.vcf --remove-indels --recode --out SPECIESmergeDP_subset_xmm22homosnps
+
+### remove *'s derived from deleted indels in gvcf mode ###
+grep -Pv "\t\*\t" SPECIESmergeDP_subset_xmm22homosnps.recode.vcf > SPECIESmergeDP_subset_xmm22homosnpsstar.vcf
+
+### calculate SFS for the subset with Pop_Con ###
+Pop-Con -i SPECIESmergeDP_subset_xmm22homosnpsstar.vcf -o COOLSFSPLOT
+

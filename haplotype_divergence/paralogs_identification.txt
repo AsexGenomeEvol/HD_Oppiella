@@ -1,0 +1,47 @@
+#Filter for phased regions:
+#get headers
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$2!=""' | cut -d " " -f 1 | sed 's/>//g' > On_phasedcontigs_all.header
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$3!=""' | cut -d " " -f 1 | sed 's/>//g' > On_phasedcontigs_271.header
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$4!=""' | cut -d " " -f 1 | sed 's/>//g' > On_phasedcontigs_75.header
+
+#get headers and regions for masking and filtering
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$4!=""' | cut -f 1 | sed 's/>//g' | sed 's/ /\t/g' > On_phasedcontigs_75.bed
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$3!=""' | cut -f 1 | sed 's/>//g' | sed 's/ /\t/g' > On_phasedcontigs_271.bed
+cat phaseableregionsheader.csv | grep '>' | sed 's/:/ /g' | sed 's/-/ /g' | awk -F'\t' '$2!=""' | cut -f 1 | sed 's/>//g' | sed 's/ /\t/g' > On_phasedcontigs_all.bed
+
+
+#extract the contigs containing the phased regions
+~/Software/scripts/extract_contigs.py -i ../genome/1_On_b1v03.fasta -l On_phasedcontigs_all.header2 -o On_phasedcontigs_all.fa
+
+#mask phased regions in the complete contigs with NNNs
+bedtools maskfasta -fi On_phasedcontigs_all.fa -bed On_phasedcontigs_all.bed -fo On_contigs_maskedphases_all.fa
+
+#get phasable regions
+bedtools getfasta -fi On_phasedcontigs_all.fa  -bed On_phasedcontigs_all.bed -fo phaseable_regions_b1v03.fasta
+
+#convert data for mapping (must be in genome folder)
+cat phaseable_regions_b1v03.fasta | cut -d ':' -f 1 > phaseable_regions_conv_b1v03.fasta
+
+
+#mapping using script
+map_reads_phases.sh
+
+#reformat
+cat On_contigs_maskedphases_all.cov.mn | awk '{print $0, "Contigs_phases_masked"}' > On_contigs_maskedphases_all.cov.mn2
+cat phaseable_regions_conv.cov.mn | awk '{print $0, "PhasedRegion"}' > phaseable_regions_conv.cov.mn2
+cat On_contigs_maskedphases_all.cov.mn2 phaseable_regions_conv.cov.mn2 | awk '{printf "%s %.0f %.0f %s\n",$1,$2,$3,$4}' > On_conmask_phreg.cov.rd
+
+cat On_buscos_conv.cov.mn | awk '{print $0, "Buscos"}' > On_buscos_conv.cov.mn2
+cat On_buscos_conv.cov.mn2 | awk '{printf "%s %.0f %.0f %s\n",$1,$2,$3,$4}' > On_buscos_conv.cov.mn2.rd
+cat On_buscos_conv.cov.mn2.rd | sed 's/-1_On_b1v03.fasta:/#/g' | cut -d '#' -f2 | sed 's/:/ /g' | sed 's/-/ /g' | cut -d ' ' -f 1,4,5,6 > On_buscos_conv.cov.mn2.rd2
+cat On_buscos_conv.cov.mn2.rd2 | grep -f 'busco_dupl.id' | awk '{print $1" "$2" "$3" ""DuplicatedBusco"}' > On_buscos_conv.cov.mn2.rd2.dupl
+cat On_buscos_conv.cov.mn2.rd2 | grep -f 'busco_compl.id' | awk '{print $1" "$2" "$3" ""CompleteBusco"}' > On_buscos_conv.cov.mn2.rd2.comp
+
+
+
+#compare if phased regions within busco hits
+cat full_table_1_On_b1v03.tsv | sort -k3 | grep '1_On' > full_table_1_On_b1v03.sorted
+join -1 3 -2 1  full_table_1_On_b1v03.sorted On_phasedcontigs_all.bed > busco_phased.joined
+
+cat busco_phased.joined | awk '{if(!($8>=$5)&&!($9<=$4))print$0}'
+

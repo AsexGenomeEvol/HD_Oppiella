@@ -1,0 +1,87 @@
+### prepare three direcotries with alignments of phased regions for subsequent tree calculation ###
+ls x* > list
+cd ../
+mkdir iqtree
+cd iqtree
+mkdir sexualdir
+cp ../treecl/list sexualdir
+mkdir alldir
+cp ../treecl/list alldir
+mkdir meselson2dir
+cp ../treecl/list meselson2dir
+cd ../treecl
+for f in x*; do perl ~/Software/scripts/Fasta2Phylip.pl $f ../iqtree/sexualdir/$f; done
+for f in x*; do perl ~/Software/scripts/Fasta2Phylip.pl $f ../iqtree/alldir/$f; done
+for f in x*; do perl ~/Software/scripts/Fasta2Phylip.pl $f ../iqtree/meselson2dir/$f; done
+
+### calculate the unconstrained and two trees constrained to fit haplotype divergence and sex respectively for each phased region (for trees, see github) ###
+cd ../iqtree/alldir
+for f in x*; do ~/Software/iqtree-1.6.10-Linux/bin/iqtree -s $f -m TEST -bb 1000 -nt 6 -czb; done
+cd ../meselson2dir
+for f in x*; do ~/Software/iqtree-1.6.10-Linux/bin/iqtree -s $f -g meselson2 -m TEST -bb 1000 -nt 6 -czb; done
+cd ../sexualdir
+for f in x*; do ~/Software/iqtree-1.6.10-Linux/bin/iqtree -s $f -g sexual -m TEST -bb 1000 -nt 6 -czb; done
+cd ../meselson2dir
+for f in *.treefile; do cat $f ../sexualdir/$f > ../$f.treels; done
+
+### do the AU topology test and extract and count test results ###
+cd ../
+mkdir trees
+mv *.treels trees
+cd trees
+rename 's/.treefile.treels//' *
+cd ../
+ls trees/x* > list
+sed -i 's|trees/||g' list
+cd ../treecl
+for f in x*; do perl ~/Software/scripts/Fasta2Phylip.pl $f ../iqtree/$f; done
+cd ../iqtree
+for f in x*; do ~/Software/iqtree-1.6.10-Linux/bin/iqtree -s $f -z trees/$f -m TEST -zb 10000 -zw -au -redo -nt 6; done
+for f in *.iqtree; do grep -w -A 5 'Tree      logL' $f | sed -n '3~4p'; done > 1
+for f in *.iqtree; do grep -w -A 5 'Tree      logL' $f | sed -n '4~4p'; done > 2
+cat 1 | awk '{print $ 17}' | grep -c '+'
+cat 1 | awk '{print $ 17}' | grep -c '-'
+cat 2 | awk '{print $ 17}' | grep -c '+'
+cat 2 | awk '{print $ 17}' | grep -c '-'
+cat 1 | awk '{print $ 17}' > 1sign
+cat 2 | awk '{print $ 17}' > 2sign
+paste list 1sign 2sign > pasted
+cat pasted | awk '{if (($2 == "+") && ($3 == "-")) print $ 0}' | grep -c ''
+cat pasted | awk '{if (($2 == "-") && ($3 == "+")) print $ 0}' | grep -c ''
+cat pasted | awk '{if (($2 == "+") && ($3 == "+")) print $ 0}' | grep -c ''
+cat pasted | awk '{if (($2 == "-") && ($3 == "-")) print $ 0}' | grep -c ''
+
+### extract regions more consistent with HD ###
+cat pasted | awk '{if (($2 == "+") && ($3 == "-")) print $ 1}' > meselsonfile
+cat pasted | awk '{if (($2 == "-") && ($3 == "+")) print $ 1}' > sexualfile
+mkdir meselsonconcatfolder
+xargs -a meselsonfile cp -t meselsonconcatfolder/
+cd meselsonconcatfolder
+
+### convert to fasta ###
+mkdir fasta
+for f in x*; do perl ~/Software/scripts/Phylip2Fasta.pl $f fasta/$f; done
+cd fasta
+
+### calculate GC for all individuals combined per region ###
+for f in x*; do ~/Software/gtool/gtool.py -g $f; done > GC
+grep -w 'GC%:' GC > GConly
+
+### repeat for regions more consistent with sex ###
+mkdir sexualconcatfolder
+xargs -a sexualfile cp -t sexualconcatfolder/
+cd sexualconcatfolder
+mkdir fasta
+for f in x*; do perl ~/Software/scripts/Phylip2Fasta.pl $f fasta/$f; done
+cd fasta
+for f in x*; do ~/Software/gtool/gtool.py -g $f; done > GC
+grep -w 'GC%:' GC > GConly
+
+### set up a directory for topology distance calculation ###
+cd alldir
+for f in *.treefile; do cat $f ../meselson2dir/$f ../sexualdir/$f > ../$f.treels; done
+cd ../
+mkdir trees2
+mv *.treels trees2
+cd trees2
+rename 's/.treefile.treels//' *

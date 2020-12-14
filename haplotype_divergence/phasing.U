@@ -1,0 +1,64 @@
+### read-backed phasing and haplotype reconstruction ###
+
+### remove genotypes with coverage smaller 10 or 5 for parallel divergence testing ###
+vcftools --vcf SPECIESmergegeno.gvcf --minDP 10 --recode --out SPECIESmergeDP
+
+### remove sites where all genotypes are missing ###
+vcftools --vcf SPECIESmergeDP.recode.vcf --max-missing-count 8 --recode --out SPECIESmergeDPmis
+
+### reduce data to biallelic sites only ###
+vcftools --vcf SPECIESmergeDPmis.recode.vcf --min-alleles 2 --max-alleles 2 --recode --out SPECIESmergeDPmis22homo
+
+### partition into snps only ###
+vcftools --vcf SPECIESmergeDPmis22homo.recode.vcf --remove-indels --recode --out SPECIESmergeDPmis22homosnps
+
+### remove *'s derived from deleted indels in gvcf mode ###
+grep -Pv "\t\*\t" SPECIESmergeDPmis22homosnps.recode.vcf > SPECIESmergeDPmis22homosnpsstar.vcf
+
+### index .bam and .vcf ###
+samtools index SPECIESmerge_split.bam
+bgzip -c SPECIESmergeDPmis22homosnpsstar.vcf > SPECIESmergeDPmm22homosnpsstar.vcf.gz
+tabix -fp vcf SPECIESmergeDPmis22homosnpsstar.vcf.gz
+
+### run phaser ###
+phaser.py --vcf SPECIESmergeDPmis22homosnpsstar.vcf.gz --bam SPECIESmerge_split.bam --mapq 30 --baseq 20 --paired_end 1 --sample INDIVIDUAL --o INDIVIDUAL --id_separator . --pass_only 0 --threads 40 --as_q_cutoff 0 --temp_dir /scratch/abrandt3/phaser_tmp
+
+### use only phases with no unique reads >= 10 for both haplotypes ###
+cat INDIVIDUAL.haplotypic_counts.txt | awk '{if (($9 >= 10) && ($10 >= 10)) print $0}' > INDIVIDUAL.haplotypic_counts_var.txt
+
+### split .bam by RG, check RG and rename accordingly ###
+samtools split SPECIESmerge_split.bam
+samtools view -H SPECIESmerge_split_x.bam | grep -w '@RG'
+cp SPECIESmerge_split_x.bam INDIVIDUAL_cov.bam
+
+### remove overhanging Ns at read ends (spanning Introns) for coverage calculation ###
+gatk SplitNCigarReads -R REFGENOME.fasta -I INDIVIDUAL_cov.bam -O INDIVIDUAL_cov_overhangs.bam --process-secondary-alignments
+
+### get coverage information for every position in the genome ###
+bedtools genomecov -ibam INDIVIDUAL_cov_overhangs.bam -g REFGENOME.fasta -d > INDIVIDUALcoverage
+
+### subset species-vcf per individual for subsequent haplotype reconstruction ###
+vcf-subset -c INDIVIDUAL SPECIESmergeDPmis22homosnpsstar.vcf > INDIVIDUAL.vcf
+
+### insert modify the reference genome per species: I) change reference bases to homozygous alternative bases (as indicated in the INDIVIDUAL. vcf), II) insert N for each position in the reference genome with coverage < 10 (as indicated in the INDIVIDUALcoverage file. This step relies on the custom made script meselson.py (github) ###
+python meselson.py -s genome_af1_coverage_new -i1 REFGENOME.fasta -i2 INDIVIDUAL.vcf -i3 INDIVIDUALcoverage -i4 10 -o INDIVIDUAL_NAF.fasta
+
+### determines overlapping phaseable region (for details see annotated meselson.py script) ###
+mkdir On
+mv *var.txt On
+python meselson.py -s fix_phaser -i1 On
+ls -1 On_fix/*.txt > On_fix_input.txt
+python meselson.py -s phase_v2 -i1 On_fix_input.txt -i2 100 -i3 1
+ls -1 On_fix/*.txt > On_fix_input.txt
+mkdir phase_ind
+mv *phase phase_ind
+
+### extract phaseable region from modified reference genome per individual ###
+python meselson.py -s extract_allele_phaser_v2 -i1 phase_ind/P1I1_P1I2_P1I3_P2I1_P2I3_P3I1_P3I2_P3I3.phase -i2 SPECIES_fix_input.txt -i3 INDIVIDUAL_NAF.fasta 
+
+### convert to non-interleaved for downstream analyses (script see github) ###
+python convert_fasta.py -i INDIVIDUAL1_NAF_P1I1_P1I2_P1I3_P2I1_P2I3_P3I1_P3I2_P3I3.fasta -o P1I1_P1I2_P1I3_P2I1_P2I3_P3I1_P3I2_P3I3_INDIVIDUAL1ni.fasta
+
+
+
+

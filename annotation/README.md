@@ -27,7 +27,7 @@
 ```
 source Software/busco/3.0.2b.sh
 
-run_BUSCO.py --long -i *.fasta -o output -l insecta_odb9 -m geno -c 10
+run_BUSCO.py --long -i *.fasta -o output -l arthropoda_odb9 -m geno -c 10
 ```
 
 #### <a name="13_transcriptome"></a>1.3) Transcript evidence
@@ -100,7 +100,7 @@ Transcriptome filtered: `*Tv02.fasta`.
 - UniProtKB/Swiss-Prot (release 2018_01) + BUSCO `arthropoda_odb9`.
 
 ```
-cat uniprot_sprot.fasta insecta_odb9/ancestral_variants > uniprot_sprot_insecta.fasta
+cat uniprot_sprot.fasta arthropoda_odb9/ancestral_variants > uniprot_sprot_arthropoda.fasta
 ```
 
 ## <a name="2_structural"></a>2) Structural annotation 

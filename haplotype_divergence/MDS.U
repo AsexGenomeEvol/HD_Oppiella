@@ -1,0 +1,21 @@
+### MDS plots ###
+
+### remove genotypes with coverage smaller 10 ###
+vcftools --vcf SPECIESmergegeno.gvcf --minDP 10 --recode --out SPECIESmergeDP
+
+### remove sites where all genotypes are missing ###
+vcftools --vcf SPECIESmergeDP.recode.vcf --max-missing 1 --recode --out SPECIESmergeDPmm
+
+### reduce data to biallelic sites only ###
+vcftools --vcf SPECIESmergeDPmm.recode.vcf --min-alleles 2 --max-alleles 2 --recode --out SPECIESmergeDPmm22homo
+
+### partition into snps only ###
+vcftools --vcf SPECIESmergeDPmm22homo.recode.vcf --remove-indels --recode --out SPECIESmergeDPmm22homosnps
+
+### remove *'s derived from deleted indels in gvcf mode ###
+grep -Pv "\t\*\t" SPECIESmergeDPmm22homosnps.recode.vcf > SPECIESmergeDPmm22homosnpsstar.vcf
+
+### calculate mds plot with plink ###
+~/Software/plink1.9/plink --vcf SPECIESmergeDPmm22homosnpsstar.vcf --cluster --mds-plot 2 eigvals --allow-extra-chr
+
+

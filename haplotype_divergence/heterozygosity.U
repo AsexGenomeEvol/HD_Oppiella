@@ -1,0 +1,24 @@
+### remove genotypes with a coverage < 10 ###
+vcftools --vcf SPECIESmergegeno.gvcf --minDP 10 --recode --out SPECIESmergeDP
+
+### remove sites where all genotypes are missing ###
+vcftools --vcf SPECIESmergeDP.recode.vcf --max-missing 1 --recode --out SPECIESmergeDPmm
+
+### remove triallelic sites but keep monomorphic sites ###
+vcftools --vcf SPECIESmergeDPmm.recode.vcf --min-alleles 1 --max-alleles 2 --recode --out SPECIESmergeDPmm22homo
+
+### partition into snps only ###
+vcftools --vcf SPECIESmergeDPmm22homo.recode.vcf --remove-indels --recode --out SPECIESmergeDPmm22homosnps
+
+### remove *'s derived from deleted indels in gvcf mode ###
+grep -Pv "\t\*\t" SPECIESmergeDPmm22homosnps.recode.vcf > SPECIESmergeDPmm22homosnpsstar.vcf
+
+### replace / with @ to enable easy awk usage ###
+sed 's|/|@|g' SPECIESmergeDPmm22homosnpsstar.vcf > SPECIESmergeDPmm22homosnpsstar@.vcf
+	
+### count number of homozygous reference, non-reference genotypes and heterozygous genotypes ###
+cat SPECIESmergeDPmm22homosnpsstar@.vcf | awk '{if ($10 ~ /0@0/) print $0}' | grep -c ''
+cat SPECIESmergeDPmm22homosnpsstar@.vcf | awk '{if ($10 ~ /1@1/) print $0}' | grep -c ''
+cat SPECIESmergeDPmm22homosnpsstar@.vcf | awk '{if ($10 ~ /0@1/) print $0}' | grep -c ''
+
+### divide no. het.genotypes/total number ###
