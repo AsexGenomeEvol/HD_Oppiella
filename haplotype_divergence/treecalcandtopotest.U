@@ -58,6 +58,47 @@ mkdir meselsonconcatfolder
 xargs -a meselsonfile cp -t meselsonconcatfolder/
 cd meselsonconcatfolder
 
+### repeat the above but also test vs unconstrained trees in addition ###
+cd ../alldir
+for f in *.treefile; do cat $f ../meselson2dir/$f ../sexualdir/$f > ../$f.treelsall; done
+cd ../
+mkdir treesall
+mv *.treelsall treesall
+cd treesall
+rename 's/.treefile.treelsall//' *
+cd ../
+ls treesall/x* > list
+sed -i 's|treesall/||g' list
+cd ../treecl
+for f in x*; do perl ~/Software/scripts/Fasta2Phylip.pl $f ../iqtree/$f; done
+cd ../iqtree
+for f in x*; do ~/Software/iqtree-1.6.10-Linux/bin/iqtree -s $f -z treesall/$f -m TEST -zb 10000 -zw -au -redo -nt 6; done
+for f in *.iqtree; do grep -w -A 5 'Tree      logL' $f | sed -n '3~5p'; done > 1
+for f in *.iqtree; do grep -w -A 5 'Tree      logL' $f | sed -n '4~5p'; done > 2
+for f in *.iqtree; do grep -w -A 5 'Tree      logL' $f | sed -n '5~5p'; done > 3
+cat 1 | awk '{print $ 17}' | grep -c '+'
+cat 1 | awk '{print $ 17}' | grep -c '-'
+cat 2 | awk '{print $ 17}' | grep -c '+'
+cat 2 | awk '{print $ 17}' | grep -c '-'
+cat 3 | awk '{print $ 17}' | grep -c '+'
+cat 3 | awk '{print $ 17}' | grep -c '-'
+cat 1 | awk '{print $ 17}' > 1sign
+cat 2 | awk '{print $ 17}' > 2sign
+cat 3 | awk '{print $ 17}' > 3sign
+paste list 1sign 2sign 3sign > pastedall
+cat pastedall | awk '{if (($2 == "+") && ($3 == "+") && ($4 == "+")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "+") && ($3 == "-") && ($4 == "-")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "-") && ($3 == "+") && ($4 == "-")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "-") && ($3 == "-") && ($4 == "+")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "+") && ($3 == "+") && ($4 == "-")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "-") && ($3 == "+") && ($4 == "+")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "+") && ($3 == "-") && ($4 == "+")) print $ 0}' | grep -c ''
+cat pastedall | awk '{if (($2 == "-") && ($3 == "-") && ($4 == "-")) print $ 0}' | grep -c ''
+
+cat pasted | awk '{if (($2 == "-") && ($3 == "+")) print $ 0}' | grep -c ''
+cat pasted | awk '{if (($2 == "+") && ($3 == "+")) print $ 0}' | grep -c ''
+cat pasted | awk '{if (($2 == "-") && ($3 == "-")) print $ 0}' | grep -c ''
+
 ### convert to fasta ###
 mkdir fasta
 for f in x*; do perl ~/Software/scripts/Phylip2Fasta.pl $f fasta/$f; done
